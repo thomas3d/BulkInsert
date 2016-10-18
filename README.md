@@ -11,7 +11,7 @@ Other example (BulkSQLWriter.cs) show how to use BulkInsert and BulkUpdate using
 Please note that BulkUpdate create a temp table in the database and drop it again. 
 
 # USAGE
-
+```
 public class YourDTO
 {
     [DataMember]
@@ -27,4 +27,4 @@ List<YourDTO> result = GetItemsToUpdate();  // return 100000 rows.
 BulkSQLWriter _sqlWriter = new BulkSQLWriter(ConfigurationManager.ConnectionStrings["MyDatabaseName"].ConnectionString);
 const string sqlUpdate = "UPDATE T SET colA = Temp.colA, colB = Temp.colB FROM YourTableName T INNER JOIN #TmpTableYourTableName Temp ON T.YourTableID = Temp.YourTableID";
 _sqlWriter.UpdateData(result, sqlUpdate, "YourTableName");
-
+```
