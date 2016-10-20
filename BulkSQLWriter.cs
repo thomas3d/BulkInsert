@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Data.SqlClient;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
@@ -94,6 +92,57 @@ namespace BulkInsert
                 catch (Exception ex)
                 {
                     throw new Exception("Unable to BulkUpdate " + tableName, ex);
+                }
+                finally
+                {
+                    conn.Close();
+                }
+            }
+        }
+
+        internal DataTable BulkSelect(DataTable dtJoin, string joinSelect, string tableName = null, bool keepTable = false)
+        {
+            string tempTableName = "#TmpTable" + tableName;
+            using (SqlConnection conn = new SqlConnection(ConnectionString))
+            using (SqlCommand command = new SqlCommand("", conn))
+            {
+                try
+                {
+                    conn.Open();
+
+                    command.CommandText = $"SELECT OBJECT_ID('{tempTableName}')";
+                    object exists = command.ExecuteScalar();
+
+                    if (exists != null && DBNull.Value == exists)
+                    {
+                        //Creating temp table on database
+                        command.CommandText = $"CREATE TABLE {tempTableName} ( {GetColumns(dtJoin)} )";
+                        command.ExecuteNonQuery();
+                    }
+
+                    //Bulk insert into temp table
+                    using (SqlBulkCopy bulkcopy = new SqlBulkCopy(conn))
+                    {
+                        bulkcopy.BulkCopyTimeout = 660;
+                        bulkcopy.DestinationTableName = tempTableName;
+                        bulkcopy.WriteToServer(dtJoin);
+                        bulkcopy.Close();
+                    }
+
+                    command.CommandTimeout = 300;
+                    if (keepTable)
+                        joinSelect = joinSelect + "; TRUNCATE TABLE " + tempTableName;
+                    else
+                        joinSelect = joinSelect + "; DROP TABLE " + tempTableName;
+
+                    var dtResult = new DataTable();
+                    var da = new SqlDataAdapter(joinSelect, conn);
+                    da.Fill(dtResult);
+                    return dtResult;                    
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Unable to BulkSelect " + tableName, ex);
                 }
                 finally
                 {
