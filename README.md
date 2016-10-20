@@ -8,7 +8,9 @@ This repo include two examples on how to do it the fast way using SqlBulkCopy.
 One example (SomeEntity.cs) show how to add BulkInsert on an Entity Framework   
 Other example (BulkSQLWriter.cs) show how to use BulkInsert and BulkUpdate using plain ADO.NET
 
-Please note that BulkUpdate create a temp table in the database and drop it again. 
+Please note that BulkUpdate and BulkSelect create a temp table in the database and drop it again. 
+
+Using a combination of BulkSelect and BulkUpdate you can copy a large number specific row/values from one database to another fast. 
 
 # USAGE
 ```
