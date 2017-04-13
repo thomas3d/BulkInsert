@@ -1,6 +1,8 @@
 # BulkInsert & BulkUpdate
 Fast way to insert and update a very large list of rows in MS SQL using C#
 
+Intro Youtube Video: https://www.youtube.com/watch?v=5rjsjEPUMo4
+
 Problem is that insert and update operations in MS SQL are very slow if you use Entity Framework or SqlCommand in the standard way. 
 
 This repo include two examples on how to do it the fast way using SqlBulkCopy. 
