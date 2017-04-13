@@ -9,6 +9,7 @@ using System.Data;
 using System.Reflection;
 using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
+using System.Transactions;
 
 namespace BulkInsert
 {
@@ -82,7 +83,7 @@ namespace BulkInsert
             DataTable table = ConvertToDataTable(list, tableName);
             using (var bulkCopy = new SqlBulkCopy(Database.Connection.ConnectionString))
             {
-                foreach(DataColumn c in table.Columns)
+                foreach (DataColumn c in table.Columns)
                     bulkCopy.ColumnMappings.Add(c.ColumnName, c.ColumnName);
 
                 bulkCopy.DestinationTableName = tableName;
@@ -93,7 +94,7 @@ namespace BulkInsert
             }
         }
 
-        public void BulkUpdate<T>(IEnumerable<T> list, string sqlUpdate, string tableName = null, bool keepTable = false) where T : class
+        public void BulkUpdate<T>(IEnumerable<T> list, string sqlUpdate, string tableName = null, bool keepTable = false)
         {
             tableName = GetTableName<T>(tableName);
             string tempTableName = "#TmpTable" + tableName;
@@ -200,7 +201,12 @@ namespace BulkInsert
         {
             string output = string.Empty;
             foreach (DataColumn col in dt.Columns)
-                output += col.ColumnName + " " + ConvertToSqlType[col.DataType.ToString()] + " COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL, ";
+            {
+                output += col.ColumnName + " " + ConvertToSqlType[col.DataType.ToString()];
+                if (col.DataType.ToString().Contains("String"))
+                    output += " COLLATE SQL_Latin1_General_CP1_CI_AS";
+                output += " NOT NULL, ";
+            }
 
             return output.Substring(0, output.Length - 2);  // remove the last ','
         }
@@ -231,7 +237,7 @@ namespace BulkInsert
             }
         }
 
-        private DataTable ConvertToDataTable<T>(IEnumerable<T> list, string tableName) where T : class
+        private DataTable ConvertToDataTable<T>(IEnumerable<T> list, string tableName)
         {
             var table = new DataTable(tableName);
             var props = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -240,6 +246,17 @@ namespace BulkInsert
                                        .Where(x => x.CanRead && x.PropertyType.Namespace.Equals("System"))
                                        .Where(y => y.CustomAttributes.Any(z => z.AttributeType.Name == "DataMemberAttribute"))
                                        .ToList();
+
+            if(!props.Any() && typeof(T).Namespace.Equals("System"))
+            {
+                table.Columns.Add("ID", typeof(T));
+                foreach (var item in list)
+                {
+                    table.Rows.Add(item);
+                }
+
+                return table;
+            }
 
             //if (Debugger.IsAttached)
             //{
@@ -267,7 +284,7 @@ namespace BulkInsert
             return table;
         }
 
-        private static string GetTableName<T>(string tableName) where T : class
+        private static string GetTableName<T>(string tableName)
         {
             TableAttribute tableAttribute = (TableAttribute)Attribute.GetCustomAttribute(typeof(T), typeof(TableAttribute));
             if (tableAttribute != null && tableName == null)
